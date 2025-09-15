@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pembayaran Berjaya - HASRA x SMAEL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #28a745;
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        .icon {
+            font-size: 4rem;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        .order-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .order-details p {
+            margin: 10px 0;
+        }
+        .order-details strong {
+            color: #8B4513;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-decoration: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            text-align: center;
+            background-color: #FFD700;
+            color: #8B4513;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            background-color: #e6c300;
+            transform: translateY(-2px);
+        }
+        .note {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 20px;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 215, 0, 0.2);
+            border-radius: 50%;
+            border-top-color: #FFD700;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading-spinner" class="loading-spinner"></div>
+        <h1 id="status-text">Mengesahkan pembayaran...</h1>
+        <div id="success-content" style="display: none;">
+            <i class="fas fa-check-circle icon"></i>
+            <h1>Pembayaran Berjaya!</h1>
+            <p>Terima kasih atas pembelian anda. Pesanan anda sedang diproses.</p>
+            <div class="order-details">
+                <p><strong>Order ID:</strong> <span id="order-id"></span></p>
+                <p><strong>Tarikh:</strong> <span id="order-date"></span></p>
+                <p><strong>Jumlah:</strong> <span id="order-total"></span></p>
+            </div>
+            <p>Kami akan menghantar butiran pesanan ke WhatsApp anda.</p>
+            <a href="https://hasraxsmael.vercel.app" class="btn">Kembali ke Laman Utama</a>
+        </div>
+        <div id="error-content" style="display: none;">
+            <i class="fas fa-exclamation-circle icon" style="color: #dc3545;"></i>
+            <h1 style="color: #dc3545;">Ralat Mengesahkan Pembayaran</h1>
+            <p>Tiada data pesanan ditemui. Sila hubungi kami untuk bantuan.</p>
+            <a href="https://api.whatsapp.com/send?phone=601127412402&text=Hi,%20saya%20nak%20tanya%20pasal%20jam%20Exclusive%20collaboration" class="btn" style="background-color: #25D366; color: white;">Hubungi WhatsApp</a>
+        </div>
+    </div>
+
+    <!-- Meta Pixel Code -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '810870364294543');
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=810870364294543&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
+
+    <script>
+        // ====================================
+        //      CONFIGURATION
+        // ====================================
+        const TELEGRAM_CONFIG = {
+            botToken: '8390631438:AAGUletc8b6kFztiuysYOWHlvYTj4tXNwy4',
+            chatId: '642142575'
+        };
+        
+        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1416323971040804906/OnfN01Ezg33-B9lLN5aH7huTbTgeHHCLXO_NtTkiHNIUTJdlfZlyJrk0eIghulpRLqPu';
+
+        // ====================================
+        //      TELEGRAM NOTIFICATION
+        // ====================================
+        async function sendTelegramNotification(orderData) {
+            const paymentStatusText = orderData.paymentStatus === 'Paid' ? 
+                '✅ <b>TELAH DIBAYAR</b>' : 
+                '⏳ <b>MENUNGGU PEMBAYARAN</b>';
+                    
+            // Format the date and time
+            const orderDateTime = new Date().toLocaleString('ms-MY', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Prepend "Smael" to product names for Telegram
+            const telegramProducts = orderData.product.split(', ').map(product => {
+                return `Smael ${product}`;
+            }).join(', ');
+                    
+            const message = `
+🆕 <b>PESANAN BARU</b> 🆕
+${paymentStatusText}
+📦 <b>PRODUK:</b> ${telegramProducts}
+🔢 <b>KUANTITI:</b> ${orderData.quantity}
+💰 <b>JUMLAH:</b> RM${orderData.total}
+👤 <b>MAKLUMAT PELANGGAN:</b>
+📝 <b>Nama:</b> ${orderData.customerName}
+📱 <b>No Telefon:</b> ${orderData.customerPhone}
+🏠 <b>Alamat:</b> ${orderData.customerAddress}
+📮 <b>Poskod:</b> ${orderData.poskod}
+🗺️ <b>Negeri:</b> ${orderData.customerState}
+💳 <b>JENIS PEMBAYARAN:</b> ${orderData.paymentMethod}
+📅 <b>MASA:</b> ${orderDateTime}
+⚠️ <b>SILA PROSESKAN PESANAN INI SECEPAT MUNGKIN</b>
+            `;
+            
+            const url = `https://api.telegram.org/bot${TELEGRAM_CONFIG.botToken}/sendMessage`;
+            const payload = {
+                chat_id: TELEGRAM_CONFIG.chatId,
+                text: message,
+                parse_mode: 'HTML'
+            };
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    return true;
+                } else {
+                    console.error('Telegram API error:', data);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error sending Telegram notification:', error);
+                return false;
+            }
+        }
+        
+        // ====================================
+        //      DISCORD NOTIFICATION
+        // ====================================
+        async function sendDiscordNotification(orderData) {
+            // Format the date and time
+            const orderDateTime = new Date().toLocaleString('ms-MY', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Prepend "Smael" to product names for Discord
+            const discordProducts = orderData.product.split(', ').map(product => {
+                return `Smael ${product}`;
+            }).join(', ');
+            
+            // Create Discord embed message
+            const discordMessage = {
+                content: "🆕 **PESANAN BARU** 🆕",
+                embeds: [{
+                    title: "Order Details",
+                    color: 0xFFD700, // Gold color
+                    fields: [
+                        {
+                            name: "Status Pembayaran",
+                            value: orderData.paymentStatus === 'Paid' ? 
+                                '✅ **TELAH DIBAYAR**' : 
+                                '⏳ **MENUNGGU PEMBAYARAN**',
+                            inline: false
+                        },
+                        {
+                            name: "Produk",
+                            value: discordProducts,
+                            inline: false
+                        },
+                        {
+                            name: "Kuantiti",
+                            value: orderData.quantity.toString(),
+                            inline: true
+                        },
+                        {
+                            name: "Jumlah",
+                            value: `RM${orderData.total}`,
+                            inline: true
+                        },
+                        {
+                            name: "Nama Pelanggan",
+                            value: orderData.customerName,
+                            inline: false
+                        },
+                        {
+                            name: "No Telefon",
+                            value: orderData.customerPhone,
+                            inline: true
+                        },
+                        {
+                            name: "Alamat",
+                            value: orderData.customerAddress,
+                            inline: false
+                        },
+                        {
+                            name: "Poskod",
+                            value: orderData.poskod,
+                            inline: true
+                        },
+                        {
+                            name: "Negeri",
+                            value: orderData.customerState,
+                            inline: true
+                        },
+                        {
+                            name: "Jenis Pembayaran",
+                            value: orderData.paymentMethod,
+                            inline: false
+                        },
+                        {
+                            name: "Masa",
+                            value: orderDateTime,
+                            inline: false
+                        }
+                    ],
+                    footer: {
+                        text: "⚠️ SILA PROSESKAN PESANAN INI SECEPAT MUNGKIN"
+                    },
+                    timestamp: new Date().toISOString()
+                }]
+            };
+            
+            try {
+                const response = await fetch(DISCORD_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(discordMessage)
+                });
+                
+                if (response.ok) {
+                    return true;
+                } else {
+                    console.error('Discord API error:', response.status, response.statusText);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error sending Discord notification:', error);
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check if there's a pending order in localStorage
+            const pendingOrder = localStorage.getItem('pendingOrder');
+            
+            if (pendingOrder) {
+                try {
+                    const order = JSON.parse(pendingOrder);
+                    
+                    // Update the page with order details
+                    document.getElementById('order-id').textContent = `#HS${order.billNo}`;
+                    document.getElementById('order-date').textContent = new Date().toLocaleString('ms-MY');
+                    document.getElementById('order-total').textContent = `RM${order.totalAmount.toFixed(2)}`;
+                    
+                    // Hide loading spinner and show success content
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    document.getElementById('status-text').style.display = 'none';
+                    document.getElementById('success-content').style.display = 'block';
+                    
+                    // Update payment status to "Paid"
+                    const updatedOrderData = {
+                        ...order.orderData,
+                        paymentStatus: 'Paid'
+                    };
+                    
+                    // Send notifications to Telegram and Discord
+                    try {
+                        await sendTelegramNotification(updatedOrderData);
+                        console.log('Telegram notification sent successfully');
+                    } catch (error) {
+                        console.error('Failed to send Telegram notification:', error);
+                    }
+                    
+                    try {
+                        await sendDiscordNotification(updatedOrderData);
+                        console.log('Discord notification sent successfully');
+                    } catch (error) {
+                        console.error('Failed to send Discord notification:', error);
+                    }
+                    
+                    // Track the Purchase event
+                    fbq('track', 'Purchase', {
+                        content_ids: order.orderData.product.split(', ').map(product => product.replace(/\s+/g, '-')),
+                        content_type: 'product',
+                        value: order.totalAmount,
+                        currency: 'MYR',
+                        num_items: order.orderData.quantity
+                    });
+                    
+                    // Clear the pending order
+                    localStorage.removeItem('pendingOrder');
+                    
+                    // Send a notification to your server to mark the order as paid
+                    // But note: We don't have a server in this example.
+                    
+                } catch (error) {
+                    console.error('Error processing order:', error);
+                    // Show error content
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    document.getElementById('status-text').style.display = 'none';
+                    document.getElementById('error-content').style.display = 'block';
+                }
+            } else {
+                // No pending order found
+                document.getElementById('loading-spinner').style.display = 'none';
+                document.getElementById('status-text').textContent = 'Tiada data pesanan ditemui';
+                document.getElementById('error-content').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
