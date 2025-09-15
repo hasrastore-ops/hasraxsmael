@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Callback - HASRA x SMAEL</title>
+</head>
+<body>
+    <script>
+        // This page is used by ToyyibPay to send payment status updates
+        // It's primarily for server-side processing, but we'll include it for completeness
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const status = urlParams.get('status');
+            const billcode = urlParams.get('billcode');
+            const order_id = urlParams.get('order_id');
+            
+            // Log the callback for debugging
+            console.log('Payment callback received:', {
+                status: status,
+                billcode: billcode,
+                order_id: order_id
+            });
+            
+            // In a real implementation, you would:
+            // 1. Verify the callback is from ToyyibPay
+            // 2. Update your database with the payment status
+            // 3. Send notifications if needed
+            
+            // Since we don't have a backend, we'll just log the information
+            // In a production environment, this would be handled by your server
+            
+            // For now, we'll redirect to the appropriate page based on status
+            if (status === '1' || status === '00') {
+                // Payment successful
+                // In a real implementation, you would update the order status here
+                window.location.href = 'https://hasraxsmael.vercel.app/payment-success.html';
+            } else {
+                // Payment failed
+                window.location.href = 'https://hasraxsmael.vercel.app/payment-failed.html';
+            }
+        });
+    </script>
+</body>
+</html>
