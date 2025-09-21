@@ -923,7 +923,27 @@
             position: relative;
         }
         .cart-item img { width: 70px; height: 70px; object-fit: cover; border-radius: 5px; }
-        .cart-item-details { flex-grow: 1; }
+        .cart-item-details { 
+            flex-grow: 1; 
+            line-height: 1.3;
+        }
+        .cart-item-details p {
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        .cart-item-details .voucher-note {
+            color: var(--peru);
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            font-style: italic;
+        }
+        .cart-item-details .savings-message {
+            color: #28a745;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 4px;
+            margin-bottom: 0;
+        }
         .cart-item .remove-item {
             position: absolute;
             top: 5px;
@@ -968,6 +988,12 @@
         .price-breakdown.discount {
             color: #2e7d32;
             font-weight: 700;
+        }
+        .discount-info .voucher-condition {
+            font-size: 0.8rem;
+            color: var(--peru);
+            margin-top: 5px;
+            font-style: italic;
         }
         
         .checkout-modal {
@@ -1662,14 +1688,14 @@
         </div>
         <div class="cart-footer">
             <div class="discount-info" id="discount-info">
-                <p><strong>Tahniah! Anda mendapat harga istimewa:</strong></p>
+                <p><strong>Voucher Applied(Tinggal 5 lagi):</strong></p>
                 <div class="price-breakdown original">
                     <span>Harga Asal:</span>
                     <span id="original-price">RM0.00</span>
                 </div>
                 <div class="price-breakdown discount">
-                    <span>Harga Anda:</span>
-                    <span id="discounted-price">RM0.00</span>
+                    <span>Voucher Applied(Tinggal 5 lagi):</span>
+                    <span id="discounted-price">-RM0.00</span>
                 </div>
                 <p>Jimat <span id="savings-amount">RM0.00</span>!</p>
             </div>
@@ -1836,6 +1862,10 @@
             failedUrl: 'https://hasraxsmael.vercel.app/payment-failed.html'
         };
         
+        // Voucher configuration
+        const VOUCHER_DISCOUNT = 93.10; // RM93.10 voucher discount
+        const ORIGINAL_PRICE = 189.00; // RM189.00 original price
+        
         // ====================================
         //      VOUCHER POPUP
         // ====================================
@@ -1867,8 +1897,9 @@
         // Claim voucher button
         voucherClaimBtn.addEventListener('click', () => {
             voucherPopup.classList.remove('active');
-            // Show notification that voucher has been claimed
+            localStorage.setItem('voucherClaimed', 'true');
             showNotification('Voucher berjaya dituntung! RM93.10 akan dipotong semasa pembayaran.', 'success');
+            updateCartDisplay(); // Refresh cart display
         });
         
         // Start voucher countdown timer
@@ -2526,17 +2557,69 @@ ${paymentStatusText}
                 cartTotalElement.textContent = 'RM0.00';
                 discountInfo.classList.remove('show');
             } else {
-                cartBodyElement.innerHTML = cart.map((item, index) => `
-                    <div class="cart-item">
-                        <img src="${item.img}" alt="${item.name}">
-                        <div class="cart-item-details">
-                            <strong>${item.name}</strong>
-                            <p>Kuantiti: ${item.quantity}</p>
-                            <p>Harga: RM${(item.price * item.quantity).toFixed(2)}</p>
+                const voucherClaimed = localStorage.getItem('voucherClaimed') === 'true';
+                const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+                
+                // Calculate totals with discount
+                let totalOriginal = totalItems * ORIGINAL_PRICE;
+                let totalDiscount = 0;
+                let totalFinal = 0;
+                
+                if (voucherClaimed) {
+                    // Apply voucher discount
+                    totalDiscount = totalItems * VOUCHER_DISCOUNT;
+                    totalFinal = totalOriginal - totalDiscount;
+                } else if (totalItems >= 2) {
+                    // Apply bundle discount
+                    totalFinal = totalItems * 85.90;
+                    totalDiscount = totalOriginal - totalFinal;
+                } else {
+                    // Apply single item discount
+                    totalFinal = totalItems * 95.90;
+                    totalDiscount = totalOriginal - totalFinal;
+                }
+                
+                // Update cart items display
+                cartBodyElement.innerHTML = cart.map((item, index) => {
+                    const itemOriginal = ORIGINAL_PRICE;
+                    let itemDiscount = 0;
+                    let itemFinal = 0;
+                    let discountNote = '';
+                    let savingsMessage = '';
+                    
+                    if (voucherClaimed) {
+                        itemDiscount = VOUCHER_DISCOUNT;
+                        itemFinal = ORIGINAL_PRICE - VOUCHER_DISCOUNT;
+                        discountNote = `<p class="voucher-note">Voucher Applied: *terhad 19 orang terawal RM${VOUCHER_DISCOUNT.toFixed(2)}</p>`;
+                        savingsMessage = `<p class="savings-message">Tahniah anda mendapat harga istimewa</p>`;
+                    } else if (totalItems >= 2) {
+                        itemDiscount = ORIGINAL_PRICE - 85.90;
+                        itemFinal = 85.90;
+                        discountNote = `<p>Bundle Discount: -RM${(ORIGINAL_PRICE - 85.90).toFixed(2)}</p>`;
+                        savingsMessage = `<p class="savings-message">Jimat RM${(ORIGINAL_PRICE - 85.90).toFixed(2)} per unit!</p>`;
+                    } else {
+                        // Single item discount
+                        itemDiscount = ORIGINAL_PRICE - 95.90;
+                        itemFinal = 95.90;
+                        discountNote = `<p>Voucher Discount: -RM${(ORIGINAL_PRICE - 95.90).toFixed(2)}</p>`;
+                        savingsMessage = `<p class="savings-message">Jimat RM${(ORIGINAL_PRICE - 95.90).toFixed(2)} per unit!</p>`;
+                    }
+                    
+                    return `
+                        <div class="cart-item">
+                            <img src="${item.img}" alt="${item.name}">
+                            <div class="cart-item-details">
+                                <strong>${item.name}</strong>
+                                <p>Kuantiti: ${item.quantity}</p>
+                                <p>Harga Asal: RM${itemOriginal.toFixed(2)}</p>
+                                ${discountNote}
+                                <p><strong>Harga Akhir: RM${itemFinal.toFixed(2)}</strong></p>
+                                ${savingsMessage}
+                            </div>
+                            <button class="remove-item" data-index="${index}">×</button>
                         </div>
-                        <button class="remove-item" data-index="${index}">×</button>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
                 
                 // Add event listeners to remove buttons
                 document.querySelectorAll('.remove-item').forEach(button => {
@@ -2546,23 +2629,41 @@ ${paymentStatusText}
                     });
                 });
                 
-                // Calculate total and apply discount if applicable
-                const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-                let total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-                let originalTotal = total;
+                // Always show discount info box for non-empty cart
+                discountInfo.classList.add('show');
+                originalPriceElement.textContent = `RM${totalOriginal.toFixed(2)}`;
+                discountedPriceElement.textContent = `-RM${totalDiscount.toFixed(2)}`;
+                savingsAmountElement.textContent = `RM${totalDiscount.toFixed(2)}`;
                 
-                if (totalItems >= 2) {
-                    // Apply discount: RM85.90 per item
-                    total = totalItems * 85.90;
-                    discountInfo.classList.add('show');
-                    originalPriceElement.textContent = `RM${originalTotal.toFixed(2)}`;
-                    discountedPriceElement.textContent = `RM${total.toFixed(2)}`;
-                    savingsAmountElement.textContent = `RM${(originalTotal - total).toFixed(2)}`;
+                // Update discount message
+                const discountMessage = discountInfo.querySelector('p strong');
+                if (voucherClaimed) {
+                    discountMessage.textContent = 'Voucher Applied:';
+                    // Add voucher condition note
+                    if (!discountInfo.querySelector('.voucher-condition')) {
+                        const conditionNote = document.createElement('p');
+                        conditionNote.className = 'voucher-condition';
+                        conditionNote.textContent = '*terhad 19 orang terawal';
+                        discountInfo.appendChild(conditionNote);
+                    }
+                } else if (totalItems >= 2) {
+                    discountMessage.textContent = 'Tahniah! Anda mendapat harga istimewa:';
+                    // Remove voucher condition if exists
+                    const existingCondition = discountInfo.querySelector('.voucher-condition');
+                    if (existingCondition) {
+                        existingCondition.remove();
+                    }
                 } else {
-                    discountInfo.classList.remove('show');
+                    // Single item discount message
+                    discountMessage.textContent = 'Harga Promosi:';
+                    // Remove voucher condition if exists
+                    const existingCondition = discountInfo.querySelector('.voucher-condition');
+                    if (existingCondition) {
+                        existingCondition.remove();
+                    }
                 }
                 
-                cartTotalElement.textContent = `RM${total.toFixed(2)}`;
+                cartTotalElement.textContent = `RM${totalFinal.toFixed(2)}`;
             }
             localStorage.setItem('cart', JSON.stringify(cart));
         }
