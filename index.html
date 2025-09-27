@@ -1089,6 +1089,10 @@
             background-color: rgba(255, 215, 0, 0.05);
         }
         .payment-option small { color: #666; }
+        .payment-option.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
         
         #success-modal .modal-body { text-align: center; }
         #success-modal i { font-size: 4rem; color: #28a745; margin-bottom: 20px; }
@@ -1514,12 +1518,13 @@
                     <div class="offer-box">
                         <h4>PAKEJ COD</h4>
                         <p class="price"><s>RM189.90</s></p>
-                        <p class="price">RM110.90</p>
+                        <p class="price">RM102.90</p>
                         <ul>
-                            <li class="drawback"><i class="fa-solid fa-circle-xmark"></i> Caj Tambahan RM15</li>
-                            <li class="drawback"><i class="fa-solid fa-circle-xmark"></i> Penghantaran Lambat (5-7 Hari)</li>
+                            <li class="drawback"><i class="fa-solid fa-circle-xmark"></i> Caj Courier RM7</li>
+                            <li class="drawback"><i class="fa-solid fa-circle-xmark"></i> Penghantaran (3-7 Hari)</li>
                             <li><i class="fa-solid fa-box"></i> Bayar pada posmen</li>
                             <li><i class="fa-solid fa-box"></i> Barang Sampai Baru Bayar</li>
+                            <li class="drawback"><i class="fa-solid fa-circle-xmark"></i>Buyer yang COD,tapi reject tanpa sebab akan disenarai hitamkan</li>
                         </ul>
                         <a href="#variations" class="btn btn-secondary">Pilih COD</a>
                     </div>
@@ -1767,11 +1772,13 @@
                 <input type="radio" name="payment" id="payment-online" value="online" checked style="display:none;">
                 <strong>Online Payment (FPX/Kad Debit)</strong>
                 <small><br>PERCUMA Shipping | Jam Sampai (1-5 hari)</small>
+                <small><br>Untuk pembayaran melalui Bank Transfer/QR, sila WhatsApp kami</small>
             </div>
             <div class="payment-option" data-payment="cod">
                  <input type="radio" name="payment" id="payment-cod" value="cod" style="display:none;">
                 <strong>Cash On Delivery (COD)</strong>
-                <small><br>+RM15 Caj Kurier | Jam Sampai (5-7 hari)</small>
+                <small><br>+RM7 Caj Kurier | Jam Sampai (5-7 hari)</small>
+                <small><br>Tidak tersedia untuk Sabah & Sarawak</small>
             </div>
             <div class="checkbox-group">
                 <input type="checkbox" id="confirm-data" required>
@@ -1865,6 +1872,10 @@
         // Voucher configuration
         const VOUCHER_DISCOUNT = 93.10; // RM93.10 voucher discount
         const ORIGINAL_PRICE = 189.00; // RM189.00 original price
+        
+        // COD configuration
+        const COD_FEE = 7.00; // Updated from 15 to 7
+        const NON_COD_STATES = ['Sabah', 'Sarawak']; // States where COD is not available
         
         // ====================================
         //      VOUCHER POPUP
@@ -2243,7 +2254,7 @@
                 
             const message = `
 🆕 <b>PESANAN BARU</b> 🆕
-${paymentStatusText}
+ ${paymentStatusText}
 📦 <b>PRODUK:</b> ${telegramProducts}
 🔢 <b>KUANTITI:</b> ${orderData.quantity}
 💰 <b>JUMLAH:</b> RM${orderData.total}
@@ -2724,16 +2735,54 @@ ${paymentStatusText}
         };
         const paymentOptions = document.querySelectorAll('.payment-option');
         
+        // Add event listener for state selection to check COD availability
+        inputs.state.addEventListener('change', checkCODAvailability);
+        
+        function checkCODAvailability() {
+            const selectedState = inputs.state.value;
+            const codOption = document.querySelector('.payment-option[data-payment="cod"]');
+            const codRadio = document.getElementById('payment-cod');
+            
+            if (NON_COD_STATES.includes(selectedState)) {
+                // Disable COD option for Sabah & Sarawak
+                codOption.classList.add('disabled');
+                codRadio.disabled = true;
+                
+                // If COD was selected, switch to online payment
+                if (codRadio.checked) {
+                    document.getElementById('payment-online').checked = true;
+                    document.querySelector('.payment-option[data-payment="online"]').classList.add('selected');
+                    codOption.classList.remove('selected');
+                }
+                
+                // Show notification
+                showNotification('Maaf, COD tidak tersedia untuk Sabah & Sarawak. Sila pilih pembayaran online.', 'info');
+            } else {
+                // Enable COD option for other states
+                codOption.classList.remove('disabled');
+                codRadio.disabled = false;
+            }
+        }
+        
         // Add real-time validation
         inputs.fullName.addEventListener('blur', () => validateName());
         inputs.phone.addEventListener('blur', () => validatePhone());
         inputs.address.addEventListener('blur', () => validateAddress());
         inputs.postcode.addEventListener('blur', () => validatePostcode());
-        inputs.state.addEventListener('change', () => validateState());
+        inputs.state.addEventListener('change', () => {
+            validateState();
+            checkCODAvailability();
+        });
         inputs.confirmData.addEventListener('change', () => validateConfirm());
         
         paymentOptions.forEach(option => {
             option.addEventListener('click', () => {
+                // Check if COD is disabled for this state
+                if (option.dataset.payment === 'cod' && NON_COD_STATES.includes(inputs.state.value)) {
+                    showNotification('Maaf, COD tidak tersedia untuk Sabah & Sarawak. Sila pilih pembayaran online.', 'info');
+                    return;
+                }
+                
                 paymentOptions.forEach(opt => opt.classList.remove('selected'));
                 option.classList.add('selected');
                 option.querySelector('input[type="radio"]').checked = true;
@@ -2827,6 +2876,15 @@ ${paymentStatusText}
             const isStateValid = validateState();
             const isConfirmed = validateConfirm();
             
+            // Check if COD is selected for Sabah or Sarawak
+            const selectedState = inputs.state.value;
+            const selectedPayment = form.querySelector('input[name="payment"]:checked').value;
+            
+            if (NON_COD_STATES.includes(selectedState) && selectedPayment === 'cod') {
+                showNotification('Maaf, COD tidak tersedia untuk Sabah & Sarawak. Sila pilih pembayaran online.', 'error');
+                return;
+            }
+            
             if (isNameValid && isPhoneValid && isAddressValid && isPostcodeValid && isStateValid && isConfirmed) {
                 // Disable the submit button to prevent multiple submissions
                 const submitButton = form.querySelector('button[type="submit"]');
@@ -2837,7 +2895,6 @@ ${paymentStatusText}
                 showLoading();
                 
                 // Get form data
-                const selectedPayment = form.querySelector('input[name="payment"]:checked').value;
                 const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
                 let totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
                 
@@ -2846,9 +2903,9 @@ ${paymentStatusText}
                     totalAmount = totalItems * 85.90;
                 }
                 
-                // Add COD fee if applicable
+                // Add COD fee if applicable (updated to RM7)
                 if (selectedPayment === 'cod') {
-                    totalAmount += 15.00;
+                    totalAmount += COD_FEE;
                 }
                 
                 // Prepare order data for Telegram and Discord
@@ -2910,6 +2967,7 @@ ${paymentStatusText}
                     } else {
                         successContent.innerHTML = `
                             <p>Sila lengkapkan pembayaran anda untuk kami proses pesanan anda dengan segera.</p>
+                            <p>Untuk pembayaran melalui Bank Transfer/QR, sila WhatsApp kami di +6011-2741 2402</p>
                             <button class="btn btn-gold" style="margin-top: 15px;" id="make-payment-btn">Buat Pembayaran Sekarang</button>
                         `;
                         
